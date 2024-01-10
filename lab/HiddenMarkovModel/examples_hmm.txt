@@ -1,0 +1,104 @@
+from markov_models import *
+import matplotlib.pyplot as plt
+
+# EXAMPLE 1
+print("\nEXAMPLE 1")
+a1 = ProbabilityVector({'rain': 0.7, 'sun': 0.3})
+a2 = ProbabilityVector({'sun': 0.1, 'rain': 0.9})
+print(a1.df)
+print(a2.df)
+
+print("Comparison:", a1 == a2)
+print("Element-wise multiplication:", a1 * a2)
+print("Argmax:", a1.argmax())
+print("Getitem:", a1['rain'])
+
+
+# EXAMPLE 2 
+print("\nEXAMPLE 2")
+
+a1 = ProbabilityVector({'rain': 0.7, 'sun': 0.3})
+a2 = ProbabilityVector({'rain': 0.6, 'sun': 0.4})
+A  = ProbabilityMatrix({'hot': a1, 'cold': a2})
+
+print(A)
+print(A.df)
+
+b1 = ProbabilityVector({'0S': 0.1, '1M': 0.4, '2L': 0.5})
+b2 = ProbabilityVector({'0S': 0.7, '1M': 0.2, '2L': 0.1})
+B =  ProbabilityMatrix({'0H': b1, '1C': b2})
+print(B)
+print(B.df)
+
+P = ProbabilityMatrix.initialize(list('abcd'), list('xyz'))
+print('Dot product:', a1 @ A)
+print('Initialization:', P)
+print(P.df)
+
+
+
+# EXAMPLE 3
+print("\nEXAMPLE 3")
+
+print("P1")
+a1 = ProbabilityVector({'1H': 0.7, '2C': 0.3})
+a2 = ProbabilityVector({'1H': 0.4, '2C': 0.6})
+
+b1 = ProbabilityVector({'1S': 0.1, '2M': 0.4, '3L': 0.5})
+b2 = ProbabilityVector({'1S': 0.7, '2M': 0.2, '3L': 0.1})
+
+A = ProbabilityMatrix({'1H': a1, '2C': a2})
+B = ProbabilityMatrix({'1H': b1, '2C': b2})
+pi = ProbabilityVector({'1H': 0.6, '2C': 0.4})
+
+hmc = HiddenMarkovChain(A, B, pi)
+observations = ['1S', '2M', '3L', '2M', '1S']
+
+print("Score for {} is {:f}.".format(observations, hmc.score(observations)))
+
+print("\nP2")
+all_possible_observations = {'1S', '2M', '3L'}
+chain_length = 3  # any int > 0
+all_observation_chains = list(product(*(all_possible_observations,) * chain_length))
+all_possible_scores = list(map(lambda obs: hmc.score(obs), all_observation_chains))
+print("All possible scores added: {}.".format(sum(all_possible_scores)))
+
+
+# EXAMPLE 4
+print("\nEXAMPLE 4")
+hmc_fp = HiddenMarkovChain_FP(A, B, pi)
+
+observations = ['1S', '2M', '3L', '2M', '1S']
+print("Score for {} is {:f}.".format(observations, hmc_fp.score(observations)))
+
+
+# EXAMPLE 5
+
+print("\nEXAMPLE 5")
+hmc_s = HiddenMarkovChain_Simulation(A, B, pi)
+observation_hist, states_hist = hmc_s.run(100)  # length = 100
+stats = pd.DataFrame({
+    'observations': observation_hist,
+    'states': states_hist}).applymap(lambda x: int(x[0])).plot()
+#plt.show()
+
+# EXAMPLE 6
+print("\nEXAMPLE 6") 
+hmc_s = HiddenMarkovChain_Simulation(A, B, pi)
+
+stats = {}
+for length in np.logspace(1, 5, 40).astype(int):
+    observation_hist, states_hist = hmc_s.run(length)
+    stats[length] = pd.DataFrame({
+        'observations': observation_hist,
+        'states': states_hist}).applymap(lambda x: int(x[0]))
+
+S = np.array(list(map(lambda x: 
+        x['states'].value_counts().to_numpy() / len(x), stats.values())))
+
+plt.semilogx(np.logspace(1, 5, 40).astype(int), S)
+plt.xlabel('Chain length T')
+plt.ylabel('Probability')
+plt.title('Converging probabilities.')
+plt.legend(['1H', '2C'])
+plt.show()
