@@ -1,1 +1,1 @@
-# beautiful-deep-mind
+# Beautiful Deep Mind
